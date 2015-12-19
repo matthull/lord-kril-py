@@ -4,7 +4,7 @@ import sys
 from kafka import SimpleProducer, KafkaClient
 import requests
 import websocket
-
+from functools import partial
 
 #######################
 #  Stockfighter API   #
@@ -18,7 +18,7 @@ def ticker_url(account, venue):
 ######################
 # Websocket Handlers #
 ######################
-def on_message(ticker, message):
+def on_message(topic, ticker, message):
     kafka = KafkaClient('localhost:9092')
     producer = SimpleProducer(kafka)
     producer.send_messages(topic.encode('utf-8'), message.encode('utf-8'))
@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     websocket.enableTrace(True)
     ticker = websocket.WebSocketApp(ticker_url(account, venue),
-                                    on_message = on_message,
+                                    on_message = partial(on_message, topic),
                                     on_error   = on_error,
                                     on_close   = on_close
                                     )
