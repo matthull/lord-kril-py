@@ -1,26 +1,26 @@
+import os
+import pdb
+import sys
 from kafka import SimpleProducer, KafkaClient
 import requests
 import websocket
-import pdb
 
+
+#######################
+#  Stockfighter API   #
+#######################
 def base_uri(protocol = 'https://'):
     return protocol + "api.stockfighter.io/ob/api"
 
 def ticker_url(account, venue):
     return '/'.join([base_uri("wss://") ,"ws", account, "venues", venue, "tickertape"])
 
-def api_alive():
-    heartbeat = requests.get(api_url('heartbeat'))
-    return heartbeat.status_code == 200
-
-kafka = KafkaClient('localhost:9092')
-producer = SimpleProducer(kafka)
-
-account = "HAR65741954"
-venue = "XEJKEX"
-topic = "-".join(["ticker", account, venue])
-
+######################
+# Websocket Handlers #
+######################
 def on_message(ticker, message):
+    kafka = KafkaClient('localhost:9092')
+    producer = SimpleProducer(kafka)
     producer.send_messages(topic.encode('utf-8'), message.encode('utf-8'))
 
 def on_error(ticker, error):
@@ -29,10 +29,21 @@ def on_error(ticker, error):
 def on_close(ticker):
     print("TICKER CLOSED")
 
-websocket.enableTrace(True)
-ticker = websocket.WebSocketApp(ticker_url(account, venue),
-                                on_message = on_message,
-                                on_error   = on_error,
-                                on_close   = on_close
-                                )
-ticker.run_forever()
+######################
+#    Entry Point     #
+######################
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: {0} account venue".format(os.path.basename(__file__)))
+        sys.exit(1)
+    account = sys.argv[1]
+    venue   = sys.argv[2]
+    topic   = "-".join(["ticker", account, venue])
+
+    websocket.enableTrace(True)
+    ticker = websocket.WebSocketApp(ticker_url(account, venue),
+                                    on_message = on_message,
+                                    on_error   = on_error,
+                                    on_close   = on_close
+                                    )
+    ticker.run_forever()
